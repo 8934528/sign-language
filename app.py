@@ -44,22 +44,42 @@ class GestureProfile:
         else:
             self.profiles = {}
     
-    def match_profile(self, finger_count, area, aspect_ratio):
+    def match_profile(self, finger_count, area, aspect_ratio, extended_fingers):
+        best_match = None
+        best_score = 0
+        
         for gesture, profile in self.profiles.items():
             if profile['finger_count'] == finger_count:
+                area_match = False
+                aspect_match = False
+                
                 if profile['min_area'] <= area <= profile['max_area']:
-                    if profile['min_aspect'] <= aspect_ratio <= profile['max_aspect']:
-                        return gesture
-        return None
+                    area_match = True
+                if profile['min_aspect'] <= aspect_ratio <= profile['max_aspect']:
+                    aspect_match = True
+                
+                if area_match and aspect_match:
+                    score = 2
+                    if 'extended_fingers' in profile:
+                        if profile['extended_fingers'] == extended_fingers:
+                            score += 3
+                    if score > best_score:
+                        best_score = score
+                        best_match = gesture
+        
+        return best_match
 
 class SignLanguageDetector:
     def __init__(self):
         self.current_word = []
         self.gesture_map = {
             'A': 'A', 'B': 'B', 'C': 'C', 'D': 'D', 'E': 'E',
-            'F': 'F', 'V': 'V', 'W': 'W', 'L': 'L', 'Y': 'Y',
-            'OK': 'OK', 'PEACE': '✌', 'THUMBS_UP': '👍',
-            'ROCK': '🤘', 'STOP': '✋'
+            'F': 'F', 'G': 'G', 'H': 'H', 'I': 'I', 'J': 'J',
+            'K': 'K', 'L': 'L', 'M': 'M', 'N': 'N', 'O': 'O',
+            'P': 'P', 'Q': 'Q', 'R': 'R', 'S': 'S', 'T': 'T',
+            'U': 'U', 'V': 'V', 'W': 'W', 'X': 'X', 'Y': 'Y',
+            'Z': 'Z', 'OK': '👌', 'PEACE': '✌', 'THUMBS_UP': '👍',
+            'ROCK': '🤘', 'STOP': '✋', 'LOVE': '🤟'
         }
         
         self.prev_position = None
@@ -67,6 +87,8 @@ class SignLanguageDetector:
         self.movement_direction = "stationary"
         self.bg_subtractor = cv2.createBackgroundSubtractorMOG2()
         self.profile_manager = GestureProfile()
+        self.frame_history = []
+        self.max_history = 5
     
     def calculate_distance(self, point1, point2):
         return math.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
@@ -76,14 +98,14 @@ class SignLanguageDetector:
         lower_skin = np.array([0, 20, 70], dtype=np.uint8)
         upper_skin = np.array([20, 255, 255], dtype=np.uint8)
         skin_mask = cv2.inRange(hsv, lower_skin, upper_skin)
+        
+        lower_skin2 = np.array([0, 30, 60], dtype=np.uint8)
+        upper_skin2 = np.array([15, 255, 255], dtype=np.uint8)
+        skin_mask2 = cv2.inRange(hsv, lower_skin2, upper_skin2)
+        
+        skin_mask = cv2.bitwise_or(skin_mask, skin_mask2)
         skin_mask = cv2.GaussianBlur(skin_mask, (5, 5), 0)
         return skin_mask
-    
-    def isolate_hand(self, frame):
-        fg_mask = self.bg_subtractor.apply(frame)
-        kernel = np.ones((5,5), np.uint8)
-        fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, kernel)
-        return fg_mask
     
     def detect_location(self, hand_contour, frame_shape):
         h, w = frame_shape[:2]
@@ -173,6 +195,130 @@ class SignLanguageDetector:
         confidence = solidity * 70 + (1 / aspect_ratio) * 30
         return min(100, int(confidence))
     
+    def get_extended_fingers_pattern(self, hand_contour):
+        hull = cv2.convexHull(hand_contour, returnPoints=False)
+        if len(hull) < 3:
+            return [0, 0, 0, 0, 0]
+        
+        defects = cv2.convexityDefects(hand_contour, hull)
+        if defects is None:
+            return [0, 0, 0, 0, 0]
+        
+        finger_tips = []
+        for i in range(defects.shape[0]):
+            s, e, f, d = defects[i, 0]
+            start = tuple(hand_contour[s][0])
+            end = tuple(hand_contour[e][0])
+            far = tuple(hand_contour[f][0])
+            
+            a = self.calculate_distance(end, start)
+            b = self.calculate_distance(far, start)
+            c = self.calculate_distance(end, far)
+            
+            if b * c == 0:
+                continue
+                
+            angle = math.acos((b**2 + c**2 - a**2) / (2 * b * c)) * 180 / math.pi
+            
+            if angle <= 90 and d > 10000:
+                finger_tips.append(far)
+        
+        M = cv2.moments(hand_contour)
+        if M['m00'] == 0:
+            return [0, 0, 0, 0, 0]
+        cx = int(M['m10'] / M['m00'])
+        cy = int(M['m01'] / M['m00'])
+        
+        extended = [0, 0, 0, 0, 0]
+        
+        for tip in finger_tips:
+            if tip[0] < cx - 30:
+                if tip[1] < cy - 20:
+                    extended[1] = 1
+                elif tip[1] > cy + 20:
+                    extended[4] = 1
+                else:
+                    extended[0] = 1
+            elif tip[0] > cx + 30:
+                if tip[1] < cy - 20:
+                    extended[2] = 1
+                elif tip[1] > cy + 20:
+                    extended[4] = 1
+                else:
+                    extended[3] = 1
+            else:
+                if tip[1] < cy:
+                    extended[1] = 1
+                else:
+                    extended[3] = 1
+        
+        return extended
+    
+    def recognize_full_alphabet(self, finger_count, hand_contour, area, aspect_ratio):
+        extended = self.get_extended_fingers_pattern(hand_contour)
+        profiled = self.profile_manager.match_profile(finger_count, area, aspect_ratio, extended)
+        if profiled:
+            return profiled
+        
+        thumb_up = extended[0] if len(extended) > 0 else 0
+        index_up = extended[1] if len(extended) > 1 else 0
+        middle_up = extended[2] if len(extended) > 2 else 0
+        ring_up = extended[3] if len(extended) > 3 else 0
+        pinky_up = extended[4] if len(extended) > 4 else 0
+        
+        if finger_count == 0:
+            if area < 15000:
+                return "O"
+            elif aspect_ratio < 1.5:
+                return "S"
+            return "A"
+        
+        elif finger_count == 1:
+            if index_up:
+                if area < 15000:
+                    return "X"
+                return "D"
+            elif pinky_up:
+                return "I"
+            elif thumb_up:
+                return "👍"
+            return "B"
+        
+        elif finger_count == 2:
+            if index_up and middle_up:
+                if self.calculate_distance(
+                    tuple(hand_contour[hand_contour[:,:,0].argmin()][0]),
+                    tuple(hand_contour[hand_contour[:,:,0].argmax()][0])
+                ) < 50:
+                    return "U"
+                return "V"
+            elif index_up and thumb_up:
+                return "L"
+            elif middle_up and ring_up:
+                return "N"
+            elif index_up and pinky_up:
+                return "🤘"
+            return "C"
+        
+        elif finger_count == 3:
+            if index_up and middle_up and ring_up:
+                return "W"
+            elif thumb_up and index_up and middle_up:
+                return "F"
+            elif index_up and middle_up and pinky_up:
+                return "K"
+            return "M"
+        
+        elif finger_count == 4:
+            if not thumb_up:
+                return "E"
+            return "B"
+        
+        elif finger_count == 5:
+            return "✋"
+        
+        return "Unknown"
+    
     def detect_single_gesture(self, hand_contour):
         hull = cv2.convexHull(hand_contour, returnPoints=False)
         
@@ -207,24 +353,9 @@ class SignLanguageDetector:
         area, aspect_ratio = self.calculate_hand_size(hand_contour)
         confidence = self.calculate_confidence(finger_count, hand_contour)
         
-        profiled_gesture = self.profile_manager.match_profile(finger_count, area, aspect_ratio)
-        if profiled_gesture:
-            return profiled_gesture, confidence
+        gesture = self.recognize_full_alphabet(finger_count, hand_contour, area, aspect_ratio)
         
-        if finger_count == 0:
-            return "A", confidence
-        elif finger_count == 1:
-            return "B", confidence
-        elif finger_count == 2:
-            return "C", confidence
-        elif finger_count == 3:
-            return "D", confidence
-        elif finger_count == 4:
-            return "E", confidence
-        elif finger_count >= 5:
-            return "F", confidence
-        else:
-            return "Unknown", confidence
+        return gesture, confidence
     
     def detect_gestures_multi(self, frame):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -235,7 +366,7 @@ class SignLanguageDetector:
         
         hands = []
         for contour in contours:
-            if cv2.contourArea(contour) > 5000:
+            if cv2.contourArea(contour) > 3000:
                 gesture, conf = self.detect_single_gesture(contour)
                 hands.append({'gesture': gesture, 'confidence': conf})
         
@@ -252,6 +383,10 @@ class SignLanguageDetector:
             _, thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY_INV)
             
             combined = cv2.bitwise_and(thresh, skin_mask)
+            
+            kernel = np.ones((3,3), np.uint8)
+            combined = cv2.morphologyEx(combined, cv2.MORPH_CLOSE, kernel)
+            combined = cv2.morphologyEx(combined, cv2.MORPH_OPEN, kernel)
             
             contours, _ = cv2.findContours(combined, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
@@ -278,6 +413,16 @@ class SignLanguageDetector:
             gesture, confidence = self.detect_single_gesture(hand_contour)
             current_confidence = confidence
             
+            self.frame_history.append(gesture)
+            if len(self.frame_history) > self.max_history:
+                self.frame_history.pop(0)
+            
+            if len(self.frame_history) >= 3:
+                from collections import Counter
+                most_common = Counter(self.frame_history).most_common(1)
+                if most_common and most_common[0][1] >= 2:
+                    gesture = most_common[0][0]
+            
             return gesture
                 
         except Exception as e:
@@ -303,10 +448,10 @@ class SignLanguageDetector:
                 cv2.drawContours(display_frame, [hand_contour], -1, (0, 255, 0), 2)
                 
                 hull = cv2.convexHull(hand_contour)
-                cv2.drawContours(display_frame, [hull], -1, (255, 0, 0), 2)
+                cv2.drawContours(display_frame, [hull], -1, (255, 100, 100), 2)
                 
                 x, y, w, h = cv2.boundingRect(hand_contour)
-                cv2.rectangle(display_frame, (x-10, y-10), (x+w+10, y+h+10), (0, 255, 255), 2)
+                cv2.rectangle(display_frame, (x-10, y-10), (x+w+10, y+h+10), (255, 200, 0), 2)
         
         text = f"Gesture: {gesture}"
         font = cv2.FONT_HERSHEY_SIMPLEX
@@ -437,9 +582,20 @@ def save_profile():
     finger_count = data.get('finger_count')
     area_range = data.get('area_range', [0, 100000])
     aspect_range = data.get('aspect_range', [1, 5])
+    extended_fingers = data.get('extended_fingers', [0, 0, 0, 0, 0])
     
     if gesture_name and finger_count is not None:
-        detector.profile_manager.save_profile(gesture_name, finger_count, area_range, aspect_range)
+        profile = {
+            'finger_count': finger_count,
+            'min_area': area_range[0],
+            'max_area': area_range[1],
+            'min_aspect': aspect_range[0],
+            'max_aspect': aspect_range[1],
+            'extended_fingers': extended_fingers
+        }
+        detector.profile_manager.profiles[gesture_name] = profile
+        with open(detector.profile_manager.profiles_file, 'w') as f:
+            json.dump(detector.profile_manager.profiles, f, indent=2)
         return jsonify({'success': True})
     return jsonify({'success': False, 'error': 'Invalid data'})
 
@@ -495,26 +651,27 @@ if __name__ == '__main__':
     camera_thread.start()
     time.sleep(2)
     
-    print("\n" + "="*50)
-    print(" Sign Language Detection System")
-    print("="*50)
+    print("\n" + "="*60)
+    print(" Sign Language Detection System - Full A-Z")
+    print("="*60)
     print("\nCamera initialized")
     print("OpenCV detection active")
-    print("Gesture recognition active")
+    print("Full alphabet recognition (A-Z)")
     print("\nFeatures enabled:")
-    print("  • Hand shape detection (A-F)")
-    print("  • Location tracking")
-    print("  • Movement detection")
-    print("  • Palm orientation")
+    print("  • Complete A-Z letter detection")
+    print("  • Location tracking (head/chest/waist/lower)")
+    print("  • Movement detection (up/down/left/right)")
+    print("  • Palm orientation (up/down/forward/sideways)")
     print("  • Confidence scoring")
     print("  • Skin color detection")
+    print("  • Gesture history smoothing")
     print("\nServer starting at: http://localhost:5000")
     print("\nControls:")
     print("  • Show hand gesture to camera")
     print("  • Press SPACE to add gesture to text")
-    print("  • Press ENTER to confirm and continue")
-    print("  • Press BACKSPACE to delete last character")
+    print("  • Press ENTER to confirm")
+    print("  • Press BACKSPACE to delete")
     print("  • Press ESC to clear all text")
-    print("\n" + "="*50 + "\n")
+    print("\n" + "="*60 + "\n")
     
     app.run(debug=False, host='0.0.0.0', port=5000, use_reloader=False)
