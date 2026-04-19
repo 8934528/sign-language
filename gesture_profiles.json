@@ -19,5 +19,166 @@
     "max_area": 60000,
     "min_aspect": 1,
     "max_aspect": 4
+  },
+  "D": {
+    "finger_count": 3,
+    "min_area": 8000,
+    "max_area": 60000,
+    "min_aspect": 1,
+    "max_aspect": 4
+  },
+  "E": {
+    "finger_count": 4,
+    "min_area": 8000,
+    "max_area": 60000,
+    "min_aspect": 1,
+    "max_aspect": 4
+  },
+  "F": {
+    "finger_count": 5,
+    "min_area": 8000,
+    "max_area": 60000,
+    "min_aspect": 1,
+    "max_aspect": 4
+  },
+  "G": {
+    "finger_count": 1,
+    "min_area": 6000,
+    "max_area": 50000,
+    "min_aspect": 2,
+    "max_aspect": 5
+  },
+  "H": {
+    "finger_count": 2,
+    "min_area": 8000,
+    "max_area": 55000,
+    "min_aspect": 1,
+    "max_aspect": 3
+  },
+  "I": {
+    "finger_count": 1,
+    "min_area": 4000,
+    "max_area": 40000,
+    "min_aspect": 2,
+    "max_aspect": 6
+  },
+  "J": {
+    "finger_count": 1,
+    "min_area": 4000,
+    "max_area": 40000,
+    "min_aspect": 2,
+    "max_aspect": 6
+  },
+  "K": {
+    "finger_count": 2,
+    "min_area": 7000,
+    "max_area": 55000,
+    "min_aspect": 2,
+    "max_aspect": 5
+  },
+  "L": {
+    "finger_count": 2,
+    "min_area": 8000,
+    "max_area": 60000,
+    "min_aspect": 2,
+    "max_aspect": 5
+  },
+  "M": {
+    "finger_count": 3,
+    "min_area": 7000,
+    "max_area": 50000,
+    "min_aspect": 1,
+    "max_aspect": 3
+  },
+  "N": {
+    "finger_count": 2,
+    "min_area": 7000,
+    "max_area": 50000,
+    "min_aspect": 1,
+    "max_aspect": 3
+  },
+  "O": {
+    "finger_count": 0,
+    "min_area": 5000,
+    "max_area": 45000,
+    "min_aspect": 1,
+    "max_aspect": 2
+  },
+  "P": {
+    "finger_count": 2,
+    "min_area": 7000,
+    "max_area": 55000,
+    "min_aspect": 2,
+    "max_aspect": 5
+  },
+  "Q": {
+    "finger_count": 2,
+    "min_area": 6000,
+    "max_area": 50000,
+    "min_aspect": 2,
+    "max_aspect": 5
+  },
+  "R": {
+    "finger_count": 2,
+    "min_area": 7000,
+    "max_area": 55000,
+    "min_aspect": 1,
+    "max_aspect": 4
+  },
+  "S": {
+    "finger_count": 0,
+    "min_area": 5000,
+    "max_area": 45000,
+    "min_aspect": 1,
+    "max_aspect": 2
+  },
+  "T": {
+    "finger_count": 1,
+    "min_area": 5000,
+    "max_area": 45000,
+    "min_aspect": 2,
+    "max_aspect": 5
+  },
+  "U": {
+    "finger_count": 2,
+    "min_area": 7000,
+    "max_area": 55000,
+    "min_aspect": 1,
+    "max_aspect": 3
+  },
+  "V": {
+    "finger_count": 2,
+    "min_area": 8000,
+    "max_area": 60000,
+    "min_aspect": 2,
+    "max_aspect": 5
+  },
+  "W": {
+    "finger_count": 3,
+    "min_area": 8000,
+    "max_area": 60000,
+    "min_aspect": 2,
+    "max_aspect": 5
+  },
+  "X": {
+    "finger_count": 1,
+    "min_area": 5000,
+    "max_area": 45000,
+    "min_aspect": 2,
+    "max_aspect": 6
+  },
+  "Y": {
+    "finger_count": 2,
+    "min_area": 6000,
+    "max_area": 50000,
+    "min_aspect": 2,
+    "max_aspect": 5
+  },
+  "Z": {
+    "finger_count": 1,
+    "min_area": 5000,
+    "max_area": 45000,
+    "min_aspect": 2,
+    "max_aspect": 6
   }
 }
