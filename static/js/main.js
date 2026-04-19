@@ -8,13 +8,36 @@ class SignLanguageApp {
     this.confidenceScore = 0;
     this.cameraActive = true;
     this.videoFeed = null;
+    this.settingsModal = null;
+    this.aboutModal = null;
+
+    this.settings = {
+      handshape: true,
+      location: false,
+      movement: false,
+      palmOrientation: false,
+      nonManual: false,
+      grammar: false,
+      iconicity: false,
+      regional: false,
+      showIndicators: false,
+      confidenceDisplay: true,
+    };
 
     this.init();
   }
 
   async init() {
     this.videoFeed = document.getElementById("videoFeed");
+    this.settingsModal = new bootstrap.Modal(
+      document.getElementById("settingsModal"),
+    );
+    this.aboutModal = new bootstrap.Modal(
+      document.getElementById("aboutModal"),
+    );
+
     this.setupEventListeners();
+    this.loadSettings();
     this.startGestureMonitoring();
     this.startTextMonitoring();
     this.startTimeDisplay();
@@ -37,6 +60,16 @@ class SignLanguageApp {
     document
       .getElementById("clearTextHeaderBtn")
       .addEventListener("click", () => this.clearText());
+    document
+      .getElementById("settingsBtn")
+      .addEventListener("click", () => this.settingsModal.show());
+    document.getElementById("aboutInfoBtn").addEventListener("click", () => {
+      this.settingsModal.hide();
+      this.aboutModal.show();
+    });
+    document
+      .getElementById("resetSettingsBtn")
+      .addEventListener("click", () => this.resetSettings());
 
     const cameraSwitch = document.getElementById("cameraSwitch");
     cameraSwitch.addEventListener("change", (e) =>
@@ -44,10 +77,127 @@ class SignLanguageApp {
     );
 
     document.addEventListener("keydown", (e) => this.handleKeyboard(e));
-    
     document.querySelectorAll("button").forEach((btn) => {
       btn.addEventListener("mousedown", (e) => e.preventDefault());
     });
+
+    this.setupSettingsListeners();
+  }
+
+  setupSettingsListeners() {
+    const settingsMap = {
+      locationToggle: "location",
+      movementToggle: "movement",
+      palmOrientationToggle: "palmOrientation",
+      nonManualToggle: "nonManual",
+      grammarToggle: "grammar",
+      iconicityToggle: "iconicity",
+      regionalToggle: "regional",
+      showIndicatorsToggle: "showIndicators",
+      confidenceDisplayToggle: "confidenceDisplay",
+    };
+
+    Object.entries(settingsMap).forEach(([elementId, settingKey]) => {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.checked = this.settings[settingKey];
+        element.addEventListener("change", (e) => {
+          this.settings[settingKey] = e.target.checked;
+          this.saveSettings();
+          this.updateFeatureIndicators();
+          this.showFeedback(
+            `${this.getSettingName(settingKey)} ${e.target.checked ? "enabled" : "disabled"}`,
+            "info",
+          );
+        });
+      }
+    });
+  }
+
+  getSettingName(key) {
+    const names = {
+      location: "Location",
+      movement: "Movement",
+      palmOrientation: "Palm Orientation",
+      nonManual: "Non-Manual Features",
+      grammar: "Grammatical Structure",
+      iconicity: "Iconicity",
+      regional: "Regional Variants",
+      showIndicators: "Feature Indicators",
+      confidenceDisplay: "Confidence Display",
+    };
+    return names[key] || key;
+  }
+
+  saveSettings() {
+    localStorage.setItem("signLanguageSettings", JSON.stringify(this.settings));
+  }
+
+  loadSettings() {
+    const saved = localStorage.getItem("signLanguageSettings");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        Object.assign(this.settings, parsed);
+      } catch (e) {}
+    }
+  }
+
+  resetSettings() {
+    this.settings = {
+      handshape: true,
+      location: false,
+      movement: false,
+      palmOrientation: false,
+      nonManual: false,
+      grammar: false,
+      iconicity: false,
+      regional: false,
+      showIndicators: false,
+      confidenceDisplay: true,
+    };
+
+    Object.entries({
+      locationToggle: "location",
+      movementToggle: "movement",
+      palmOrientationToggle: "palmOrientation",
+      nonManualToggle: "nonManual",
+      grammarToggle: "grammar",
+      iconicityToggle: "iconicity",
+      regionalToggle: "regional",
+      showIndicatorsToggle: "showIndicators",
+      confidenceDisplayToggle: "confidenceDisplay",
+    }).forEach(([id, key]) => {
+      const el = document.getElementById(id);
+      if (el) el.checked = this.settings[key];
+    });
+
+    this.saveSettings();
+    this.updateFeatureIndicators();
+    this.showFeedback("Settings reset to default", "info");
+  }
+
+  updateFeatureIndicators() {
+    const container = document.getElementById("featureIndicators");
+    if (!container) return;
+
+    if (!this.settings.showIndicators || !this.cameraActive) {
+      container.innerHTML = "";
+      return;
+    }
+
+    const activeFeatures = [];
+    if (this.settings.location) activeFeatures.push("LOC");
+    if (this.settings.movement) activeFeatures.push("MOV");
+    if (this.settings.palmOrientation) activeFeatures.push("ORI");
+    if (this.settings.nonManual) activeFeatures.push("NMF");
+    if (this.settings.grammar) activeFeatures.push("GRM");
+    if (this.settings.iconicity) activeFeatures.push("ICO");
+    if (this.settings.regional) activeFeatures.push("REG");
+
+    container.innerHTML = activeFeatures
+      .map((f) => `<span class="feature-badge">${f}</span>`)
+      .join("");
   }
 
   toggleCamera(isActive) {
@@ -67,6 +217,7 @@ class SignLanguageApp {
       statusText.textContent = "Live";
       systemStatusText.textContent = "Active";
       liveGesture.textContent = "Initializing...";
+      this.updateFeatureIndicators();
       this.showFeedback("Camera activated", "success");
     } else {
       videoFeed.classList.add("hidden");
@@ -76,6 +227,7 @@ class SignLanguageApp {
       statusText.textContent = "Offline";
       systemStatusText.textContent = "Standby";
       liveGesture.textContent = "Camera Off";
+      document.getElementById("featureIndicators").innerHTML = "";
       this.updateGestureDisplay("--", 0);
       this.showFeedback("Camera deactivated", "info");
     }
@@ -178,16 +330,20 @@ class SignLanguageApp {
     }
 
     if (confidenceBar) {
-      confidenceBar.style.width = confidence + "%";
-      if (confidence > 70)
-        confidenceBar.style.background =
-          "linear-gradient(135deg, #5cb896 0%, #4aa87e 100%)";
-      else if (confidence > 40)
-        confidenceBar.style.background =
-          "linear-gradient(135deg, #e8a874 0%, #d89060 100%)";
-      else
-        confidenceBar.style.background =
-          "linear-gradient(135deg, #e8747a 0%, #d46066 100%)";
+      if (this.settings.confidenceDisplay) {
+        confidenceBar.style.width = confidence + "%";
+        if (confidence > 70)
+          confidenceBar.style.background =
+            "linear-gradient(135deg, #5cb896 0%, #4aa87e 100%)";
+        else if (confidence > 40)
+          confidenceBar.style.background =
+            "linear-gradient(135deg, #e8a874 0%, #d89060 100%)";
+        else
+          confidenceBar.style.background =
+            "linear-gradient(135deg, #e8747a 0%, #d46066 100%)";
+      } else {
+        confidenceBar.style.width = "0%";
+      }
     }
 
     if (gestureIcon) this.updateGestureIcon(gestureIcon, gesture);
@@ -321,7 +477,11 @@ class SignLanguageApp {
   animateConfidenceBar() {
     setInterval(() => {
       const bar = document.getElementById("confidenceBar");
-      if (bar && parseFloat(bar.style.width) === 0) {
+      if (
+        bar &&
+        parseFloat(bar.style.width) === 0 &&
+        this.settings.confidenceDisplay
+      ) {
         bar.style.width = "3%";
         setTimeout(() => (bar.style.width = "0%"), 60);
       }
@@ -330,11 +490,8 @@ class SignLanguageApp {
 }
 
 const style = document.createElement("style");
-
 style.textContent = `@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}`;
-
 document.head.appendChild(style);
-
 document.addEventListener("DOMContentLoaded", () => {
   window.app = new SignLanguageApp();
 });
