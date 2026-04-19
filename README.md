@@ -107,6 +107,7 @@ Navigate to `http://localhost:5000`
 
         sign-language/
         ├── app.py                 # Main Flask application
+        ├── gesture_profiles.json
         ├── requirements.txt       # Python dependencies
         ├── .gitignore             # Git ignore file
         ├── README.md              # Documentation
