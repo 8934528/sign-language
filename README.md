@@ -112,6 +112,7 @@ Navigate to `http://localhost:5000`
         ├── .gitignore             # Git ignore file
         ├── README.md              # Documentation
         ├── static/
+        │   ├── assets/
         │   ├── css/
         │   │   └── style.css      # Styling
         │   └── js/
