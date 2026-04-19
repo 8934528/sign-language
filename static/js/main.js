@@ -1,16 +1,19 @@
 class SignLanguageApp {
   constructor() {
-    this.currentGesture = "No gesture";
+    this.currentGesture = "--";
     this.lastGesture = "";
     this.gestureStability = 0;
     this.gestureHistory = [];
     this.stabilityThreshold = 3;
     this.confidenceScore = 0;
+    this.cameraActive = true;
+    this.videoFeed = null;
 
     this.init();
   }
 
   async init() {
+    this.videoFeed = document.getElementById("videoFeed");
     this.setupEventListeners();
     this.startGestureMonitoring();
     this.startTextMonitoring();
@@ -31,12 +34,51 @@ class SignLanguageApp {
     document
       .getElementById("clearTextBtn")
       .addEventListener("click", () => this.clearText());
+    document
+      .getElementById("clearTextHeaderBtn")
+      .addEventListener("click", () => this.clearText());
+
+    const cameraSwitch = document.getElementById("cameraSwitch");
+    cameraSwitch.addEventListener("change", (e) =>
+      this.toggleCamera(e.target.checked),
+    );
 
     document.addEventListener("keydown", (e) => this.handleKeyboard(e));
-
+    
     document.querySelectorAll("button").forEach((btn) => {
       btn.addEventListener("mousedown", (e) => e.preventDefault());
     });
+  }
+
+  toggleCamera(isActive) {
+    this.cameraActive = isActive;
+    const videoFeed = document.getElementById("videoFeed");
+    const cameraOfflay = document.getElementById("cameraOfflay");
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
+    const systemStatusText = document.getElementById("systemStatusText");
+    const liveGesture = document.getElementById("liveGesture");
+
+    if (isActive) {
+      videoFeed.classList.remove("hidden");
+      cameraOfflay.classList.remove("visible");
+      videoFeed.src = "video_feed";
+      statusDot.classList.remove("offline");
+      statusText.textContent = "Live";
+      systemStatusText.textContent = "Active";
+      liveGesture.textContent = "Initializing...";
+      this.showFeedback("Camera activated", "success");
+    } else {
+      videoFeed.classList.add("hidden");
+      cameraOfflay.classList.add("visible");
+      videoFeed.src = "";
+      statusDot.classList.add("offline");
+      statusText.textContent = "Offline";
+      systemStatusText.textContent = "Standby";
+      liveGesture.textContent = "Camera Off";
+      this.updateGestureDisplay("--", 0);
+      this.showFeedback("Camera deactivated", "info");
+    }
   }
 
   handleKeyboard(event) {
@@ -72,6 +114,10 @@ class SignLanguageApp {
 
   async startGestureMonitoring() {
     const updateGesture = async () => {
+      if (!this.cameraActive) {
+        setTimeout(updateGesture, 200);
+        return;
+      }
       try {
         const response = await fetch("/get_gesture");
         const data = await response.json();
@@ -109,7 +155,8 @@ class SignLanguageApp {
         this.gestureStability === this.stabilityThreshold &&
         gesture !== "No hand detected" &&
         gesture !== "Unknown" &&
-        gesture !== "Error"
+        gesture !== "Error" &&
+        gesture !== "--"
       ) {
         this.autoAddGesture(gesture);
       }
@@ -127,7 +174,7 @@ class SignLanguageApp {
     if (gestureElement && gestureElement.textContent !== gesture) {
       gestureElement.textContent = gesture;
       gestureElement.classList.add("gesture-pop");
-      setTimeout(() => gestureElement.classList.remove("gesture-pop"), 400);
+      setTimeout(() => gestureElement.classList.remove("gesture-pop"), 300);
     }
 
     if (confidenceBar) {
@@ -161,15 +208,21 @@ class SignLanguageApp {
   }
 
   async autoAddGesture(gesture) {
-    if (this.confidenceScore > 80) await this.addGesture(gesture);
+    if (this.confidenceScore > 80 && this.cameraActive)
+      await this.addGesture(gesture);
   }
 
   async addCurrentGesture() {
+    if (!this.cameraActive) {
+      this.showFeedback("Camera is off", "error");
+      return;
+    }
     if (
       this.currentGesture &&
       this.currentGesture !== "No hand detected" &&
       this.currentGesture !== "Unknown" &&
-      this.currentGesture !== "Error"
+      this.currentGesture !== "Error" &&
+      this.currentGesture !== "--"
     ) {
       await this.addGesture(this.currentGesture);
     }
@@ -244,7 +297,7 @@ class SignLanguageApp {
   showFeedback(message, type = "info") {
     const toast = document.createElement("div");
     toast.textContent = message;
-    toast.style.cssText = `position:fixed;top:70px;right:15px;background:${type === "success" ? "#5cb896" : type === "error" ? "#e8747a" : "#7c94d4"};color:#fff;padding:6px 14px;border-radius:9px;font-size:0.75rem;z-index:9999;animation:slideIn 0.2s ease;`;
+    toast.style.cssText = `position:fixed;top:55px;right:12px;background:${type === "success" ? "#5cb896" : type === "error" ? "#e8747a" : "#7c94d4"};color:#fff;padding:5px 12px;border-radius:9px;font-size:0.7rem;z-index:9999;animation:slideIn 0.2s ease;`;
     document.body.appendChild(toast);
     setTimeout(() => {
       toast.style.animation = "slideOut 0.2s ease";
@@ -270,15 +323,18 @@ class SignLanguageApp {
       const bar = document.getElementById("confidenceBar");
       if (bar && parseFloat(bar.style.width) === 0) {
         bar.style.width = "3%";
-        setTimeout(() => (bar.style.width = "0%"), 80);
+        setTimeout(() => (bar.style.width = "0%"), 60);
       }
     }, 3000);
   }
 }
 
 const style = document.createElement("style");
+
 style.textContent = `@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}`;
+
 document.head.appendChild(style);
+
 document.addEventListener("DOMContentLoaded", () => {
   window.app = new SignLanguageApp();
 });
