@@ -2,118 +2,200 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sign Language Detection</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
     <link href="../static/css/style.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-12 text-center mt-4">
-                <h1 class="display-4 text-primary"><i class="fas fa-hands"></i> Sign Language Detection</h1>
-                <p class="lead">Show hand gestures to the camera and see them translated to text</p>
-            </div>
-        </div>
-
-        <div class="row mt-4">
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fas fa-camera"></i> Live Camera Feed</h5>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <i class="fi fi-rr-hands-holding"></i>
+                    <h1>SignLanguage<span class="highlight">AI</span></h1>
+                </div>
+                <div class="status-section">
+                    <div class="status-indicator">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Live</span>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="video-container">
-                            <img src="{{ url_for('video_feed') }}" class="video-feed" alt="Camera Feed">
+                    <div class="time-display" id="currentTime"></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main -->
+        <main class="main-content">
+            <!-- Camera -->
+            <div class="camera-section">
+                <div class="camera-container">
+                    <div class="camera-overlay">
+                        <div class="scan-line"></div>
+                    </div>
+                    <img src="video_feed" class="video-feed" id="videoFeed" alt="Camera Feed">
+                    <div class="gesture-overlay" id="gestureOverlay">
+                        <span id="liveGesture">Initializing...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel -->
+            <div class="side-panel">
+                <div class="panel-card gesture-card">
+                    <div class="card-header-custom">
+                        <i class="fi fi-rr-hand"></i>
+                        <h3>Current Gesture</h3>
+                    </div>
+                    <div class="card-body-custom">
+                        <div class="gesture-display-container">
+                            <div class="gesture-icon" id="gestureIcon">
+                                <i class="fi fi-rr-hand-peace"></i>
+                            </div>
+                            <div class="gesture-text" id="currentGesture">No gesture</div>
+                        </div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="confidenceBar" style="width: 0%"></div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="col-md-4">
-                <div class="card mb-4">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0"><i class="fas fa-keyboard"></i> Detected Text</h5>
+                <!-- Output -->
+                <div class="panel-card output-card">
+                    <div class="card-header-custom">
+                        <i class="fi fi-rr-comment-alt"></i>
+                        <h3>Output Text</h3>
+                        <button class="icon-btn" onclick="app.clearText()" title="Clear all">
+                            <i class="fi fi-rr-trash"></i>
+                        </button>
                     </div>
-                    <div class="card-body">
-                        <div id="outputText" class="output-text">Start signing...</div>
+                    <div class="card-body-custom">
+                        <div class="output-container">
+                            <div class="output-text" id="outputText">Ready to sign...</div>
+                        </div>
+                        <div class="text-stats">
+                            <span class="stat-item">
+                                <i class="fi fi-rr-text"></i>
+                                <span id="charCount">0</span>
+                            </span>
+                            <span class="stat-item">
+                                <i class="fi fi-rr-spell-check"></i>
+                                <span id="wordCount">0</span>
+                            </span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="card mb-4">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="fas fa-hand-point-up"></i> Current Gesture</h5>
+                <!-- Controls -->
+                <div class="panel-card controls-card">
+                    <div class="card-header-custom">
+                        <i class="fi fi-rr-settings"></i>
+                        <h3>Controls</h3>
                     </div>
-                    <div class="card-body">
-                        <div id="currentGesture" class="gesture-display">No gesture detected</div>
-                    </div>
-                </div>
-
-                <div class="card mb-4">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0"><i class="fas fa-gamepad"></i> Controls</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <button id="addGesture" class="btn btn-primary">
-                                <i class="fas fa-plus-circle"></i> Add Gesture
+                    <div class="card-body-custom">
+                        <div class="controls-grid">
+                            <button class="control-btn primary" id="addGestureBtn">
+                                <i class="fi fi-rr-plus-small"></i>
+                                <span>Add</span>
+                                <small>Enter</small>
                             </button>
-                            <button id="clearText" class="btn btn-danger">
-                                <i class="fas fa-trash"></i> Clear Text
+                            <button class="control-btn secondary" id="addSpaceBtn">
+                                <i class="fi fi-rr-space-shuttle"></i>
+                                <span>Space</span>
+                                <small>Space</small>
                             </button>
-                            <div class="btn-group">
-                                <button id="addSpace" class="btn btn-secondary">
-                                    <i class="fas fa-space-bar"></i> Space
-                                </button>
-                                <button id="backspace" class="btn btn-secondary">
-                                    <i class="fas fa-backspace"></i> Backspace
-                                </button>
-                            </div>
+                            <button class="control-btn secondary" id="backspaceBtn">
+                                <i class="fi fi-rr-delete"></i>
+                                <span>Delete</span>
+                                <small>Backspace</small>
+                            </button>
+                            <button class="control-btn danger" id="clearTextBtn">
+                                <i class="fi fi-rr-broom"></i>
+                                <span>Clear</span>
+                                <small>Esc</small>
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <div class="card">
-                    <div class="card-header bg-dark text-white">
-                        <h5 class="mb-0"><i class="fas fa-book"></i> Gesture Guide</h5>
+                <!-- Guide -->
+                <div class="panel-card guide-card">
+                    <div class="card-header-custom">
+                        <i class="fi fi-rr-book-alt"></i>
+                        <h3>Gesture Guide</h3>
                     </div>
-                    <div class="card-body">
-                        <div class="gesture-guide">
-                            <div class="gesture-item">
-                                <span class="gesture-badge">A</span>
-                                <span>Fist (0 fingers)</span>
+                    <div class="card-body-custom">
+                        <div class="guide-grid">
+                            <div class="guide-item">
+                                <span class="guide-gesture">A</span>
+                                <span class="guide-desc">Closed fist</span>
                             </div>
-                            <div class="gesture-item">
-                                <span class="gesture-badge">B</span>
-                                <span>Pointing (1 finger)</span>
+                            <div class="guide-item">
+                                <span class="guide-gesture">B</span>
+                                <span class="guide-desc">Open palm, thumb in</span>
                             </div>
-                            <div class="gesture-item">
-                                <span class="gesture-badge">C</span>
-                                <span>Two fingers</span>
+                            <div class="guide-item">
+                                <span class="guide-gesture">C</span>
+                                <span class="guide-desc">Curved hand</span>
                             </div>
-                            <div class="gesture-item">
-                                <span class="gesture-badge">D</span>
-                                <span>Three fingers</span>
+                            <div class="guide-item">
+                                <span class="guide-gesture">D</span>
+                                <span class="guide-desc">Index up, thumb middle</span>
                             </div>
-                            <div class="gesture-item">
-                                <span class="gesture-badge">E</span>
-                                <span>Four fingers</span>
+                            <div class="guide-item">
+                                <span class="guide-gesture">V</span>
+                                <span class="guide-desc">Peace sign</span>
                             </div>
-                            <div class="gesture-item">
-                                <span class="gesture-badge">F</span>
-                                <span>Open hand</span>
+                            <div class="guide-item">
+                                <span class="guide-gesture">W</span>
+                                <span class="guide-desc">Three fingers up</span>
                             </div>
-                        </div>
-                        <div class="mt-3">
-                            <small class="text-muted">
-                                <i class="fas fa-lightbulb"></i> Ensure good lighting for best results.
-                            </small>
+                            <div class="guide-item">
+                                <span class="guide-gesture">L</span>
+                                <span class="guide-desc">L-shape</span>
+                            </div>
+                            <div class="guide-item">
+                                <span class="guide-gesture">Y</span>
+                                <span class="guide-desc">Thumb & pinky</span>
+                            </div>
+                            <div class="guide-item">
+                                <span class="guide-gesture">👍</span>
+                                <span class="guide-desc">Thumbs up</span>
+                            </div>
+                            <div class="guide-item">
+                                <span class="guide-gesture">🤘</span>
+                                <span class="guide-desc">Rock sign</span>
+                            </div>
+                            <div class="guide-item">
+                                <span class="guide-gesture">👌</span>
+                                <span class="guide-desc">OK sign</span>
+                            </div>
+                            <div class="guide-item">
+                                <span class="guide-gesture">✋</span>
+                                <span class="guide-desc">Open hand</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="footer-content">
+                <div class="keyboard-hints">
+                    <span class="hint"><kbd>Space</kbd> Add Space</span>
+                    <span class="hint"><kbd>Enter</kbd> Add Gesture</span>
+                    <span class="hint"><kbd>Backspace</kbd> Delete</span>
+                    <span class="hint"><kbd>Esc</kbd> Clear All</span>
+                </div>
+                <div class="system-status">
+                    <i class="fi fi-rr-shield-check"></i>
+                    <span>System Active</span>
+                </div>
+            </div>
+        </footer>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
