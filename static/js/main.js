@@ -11,6 +11,10 @@ class SignLanguageApp {
     this.settingsModal = null;
     this.aboutModal = null;
 
+    this.currentLocation = "unknown";
+    this.currentMovement = "stationary";
+    this.currentOrientation = "unknown";
+
     this.settings = {
       handshape: true,
       location: false,
@@ -39,6 +43,7 @@ class SignLanguageApp {
     this.setupEventListeners();
     this.loadSettings();
     this.startGestureMonitoring();
+    this.startFeaturesMonitoring();
     this.startTextMonitoring();
     this.startTimeDisplay();
     this.animateConfidenceBar();
@@ -72,11 +77,13 @@ class SignLanguageApp {
       .addEventListener("click", () => this.resetSettings());
 
     const cameraSwitch = document.getElementById("cameraSwitch");
+
     cameraSwitch.addEventListener("change", (e) =>
       this.toggleCamera(e.target.checked),
     );
 
     document.addEventListener("keydown", (e) => this.handleKeyboard(e));
+
     document.querySelectorAll("button").forEach((btn) => {
       btn.addEventListener("mousedown", (e) => e.preventDefault());
     });
@@ -101,6 +108,7 @@ class SignLanguageApp {
       const element = document.getElementById(elementId);
       if (element) {
         element.checked = this.settings[settingKey];
+
         element.addEventListener("change", (e) => {
           this.settings[settingKey] = e.target.checked;
           this.saveSettings();
@@ -187,12 +195,22 @@ class SignLanguageApp {
     }
 
     const activeFeatures = [];
-    if (this.settings.location) activeFeatures.push("LOC");
-    if (this.settings.movement) activeFeatures.push("MOV");
-    if (this.settings.palmOrientation) activeFeatures.push("ORI");
+
+    if (this.settings.location)
+      activeFeatures.push(`LOC:${this.currentLocation}`);
+
+    if (this.settings.movement)
+      activeFeatures.push(`MOV:${this.currentMovement}`);
+
+    if (this.settings.palmOrientation)
+      activeFeatures.push(`ORI:${this.currentOrientation}`);
+
     if (this.settings.nonManual) activeFeatures.push("NMF");
+
     if (this.settings.grammar) activeFeatures.push("GRM");
+
     if (this.settings.iconicity) activeFeatures.push("ICO");
+    
     if (this.settings.regional) activeFeatures.push("REG");
 
     container.innerHTML = activeFeatures
@@ -282,6 +300,28 @@ class SignLanguageApp {
     updateGesture();
   }
 
+  async startFeaturesMonitoring() {
+    const updateFeatures = async () => {
+      if (!this.cameraActive) {
+        setTimeout(updateFeatures, 500);
+        return;
+      }
+
+      try {
+        const response = await fetch("/get_all_features");
+        const data = await response.json();
+        this.currentLocation = data.location || "unknown";
+        this.currentMovement = data.movement || "stationary";
+        this.currentOrientation = data.orientation || "unknown";
+        this.confidenceScore = data.confidence || 0;
+        this.updateFeatureIndicators();
+      } catch (error) {}
+
+      setTimeout(updateFeatures, 500);
+    };
+    updateFeatures();
+  }
+
   processGesture(gesture) {
     this.gestureHistory.push(gesture);
     if (this.gestureHistory.length > 10) this.gestureHistory.shift();
@@ -298,10 +338,7 @@ class SignLanguageApp {
       100,
     );
 
-    if (
-      this.gestureStability >= this.stabilityThreshold ||
-      gesture !== this.currentGesture
-    ) {
+    if (this.gestureStability >= this.stabilityThreshold || gesture !== this.currentGesture) {
       this.updateGestureDisplay(gesture, this.confidenceScore);
       if (
         this.gestureStability === this.stabilityThreshold &&
@@ -490,8 +527,11 @@ class SignLanguageApp {
 }
 
 const style = document.createElement("style");
+
 style.textContent = `@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}`;
+
 document.head.appendChild(style);
+
 document.addEventListener("DOMContentLoaded", () => {
   window.app = new SignLanguageApp();
 });
