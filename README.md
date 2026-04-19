@@ -5,7 +5,6 @@ A real-time sign language detection and translation system using computer vision
 ![Sign Language Detection](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-2.3.3-green.svg)
 ![OpenCV](https://img.shields.io/badge/OpenCV-4.8.1-red.svg)
-![MediaPipe](https://img.shields.io/badge/MediaPipe-0.10.7-orange.svg)
 
 ## Features
 
