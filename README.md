@@ -1,4 +1,4 @@
-# Sign Language Detection System 🤟
+# Sign Language Detection System
 
 A real-time sign language detection and translation system using computer vision and machine learning. This application captures hand gestures through your webcam and converts them into text, enabling basic non-verbal communication.
 
@@ -8,7 +8,7 @@ A real-time sign language detection and translation system using computer vision
 ![MediaPipe](https://img.shields.io/badge/MediaPipe-0.10.7-orange.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-## ✨ Features
+## Features
 
 - **Real-time Gesture Recognition**: Detects and classifies hand gestures instantly using your webcam
 - **Extended Alphabet Support**: Recognizes letters A-Z plus special gestures (👍, 🤘, 👌, ✋)
@@ -20,7 +20,7 @@ A real-time sign language detection and translation system using computer vision
 - **Live Statistics**: Real-time character and word count
 - **Gesture Guide**: Built-in reference for all supported gestures
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
