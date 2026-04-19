@@ -56,21 +56,10 @@ class SignLanguageDetector:
     def __init__(self):
         self.current_word = []
         self.gesture_map = {
-            'A': 'A',
-            'B': 'B', 
-            'C': 'C', 
-            'D': 'D', 
-            'E': 'E',
-            'F': 'F', 
-            'V': 'V', 
-            'W': 'W', 
-            'L': 'L', 
-            'Y': 'Y',
-            'OK': 'OK', 
-            'PEACE': '✌', 
-            'THUMBS_UP': '👍',
-            'ROCK': '🤘', 
-            'STOP': '✋'
+            'A': 'A', 'B': 'B', 'C': 'C', 'D': 'D', 'E': 'E',
+            'F': 'F', 'V': 'V', 'W': 'W', 'L': 'L', 'Y': 'Y',
+            'OK': 'OK', 'PEACE': '✌', 'THUMBS_UP': '👍',
+            'ROCK': '🤘', 'STOP': '✋'
         }
         
         self.prev_position = None
@@ -267,11 +256,19 @@ class SignLanguageDetector:
             contours, _ = cv2.findContours(combined, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
             if not contours:
+                current_location = "unknown"
+                current_movement = "stationary"
+                current_orientation = "unknown"
+                current_confidence = 0
                 return "No hand detected"
             
             hand_contour = max(contours, key=cv2.contourArea)
             
-            if cv2.contourArea(hand_contour) < 5000:
+            if cv2.contourArea(hand_contour) < 3000:
+                current_location = "unknown"
+                current_movement = "stationary"
+                current_orientation = "unknown"
+                current_confidence = 0
                 return "No hand detected"
             
             current_location = self.detect_location(hand_contour, frame.shape)
@@ -285,6 +282,10 @@ class SignLanguageDetector:
                 
         except Exception as e:
             print(f"Detection error: {e}")
+            current_location = "unknown"
+            current_movement = "stationary"
+            current_orientation = "unknown"
+            current_confidence = 0
             return "Error"
     
     def draw_gesture_info(self, frame, gesture):
@@ -298,7 +299,7 @@ class SignLanguageDetector:
         
         if contours:
             hand_contour = max(contours, key=cv2.contourArea)
-            if cv2.contourArea(hand_contour) > 5000:
+            if cv2.contourArea(hand_contour) > 3000:
                 cv2.drawContours(display_frame, [hand_contour], -1, (0, 255, 0), 2)
                 
                 hull = cv2.convexHull(hand_contour)
@@ -348,7 +349,7 @@ def camera_thread():
     cap.set(cv2.CAP_PROP_FPS, 30)
     
     frame_count = 0
-    process_every_n_frames = 2
+    process_every_n_frames = 1
     
     while True:
         success, frame = cap.read()
@@ -370,7 +371,7 @@ def camera_thread():
         with frame_lock:
             latest_frame = frame
             
-        time.sleep(0.01)
+        time.sleep(0.03)
     
     cap.release()
 
@@ -492,6 +493,7 @@ def get_sentence():
 if __name__ == '__main__':
     camera_thread = threading.Thread(target=camera_thread, daemon=True)
     camera_thread.start()
+    time.sleep(2)
     
     print("\n" + "="*50)
     print(" Sign Language Detection System")
@@ -500,20 +502,19 @@ if __name__ == '__main__':
     print("OpenCV detection active")
     print("Gesture recognition active")
     print("\nFeatures enabled:")
-    print("  - Hand shape detection (A-F)")
-    print("  - Location tracking")
-    print("  - Movement detection")
-    print("  - Palm orientation")
-    print("  - Confidence scoring")
-    print("  - Skin color detection")
-    print("  - Gesture profiles")
+    print("  • Hand shape detection (A-F)")
+    print("  • Location tracking")
+    print("  • Movement detection")
+    print("  • Palm orientation")
+    print("  • Confidence scoring")
+    print("  • Skin color detection")
     print("\nServer starting at: http://localhost:5000")
     print("\nControls:")
-    print("  - Show hand gesture to camera")
-    print("  - Press SPACE to add gesture to text")
-    print("  - Press ENTER to confirm and continue")
-    print("  - Press BACKSPACE to delete last character")
-    print("  - Press ESC to clear all text")
+    print("  • Show hand gesture to camera")
+    print("  • Press SPACE to add gesture to text")
+    print("  • Press ENTER to confirm and continue")
+    print("  • Press BACKSPACE to delete last character")
+    print("  • Press ESC to clear all text")
     print("\n" + "="*50 + "\n")
     
     app.run(debug=False, host='0.0.0.0', port=5000, use_reloader=False)

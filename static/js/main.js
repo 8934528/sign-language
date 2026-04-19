@@ -10,6 +10,7 @@ class SignLanguageApp {
     this.videoFeed = null;
     this.settingsModal = null;
     this.aboutModal = null;
+    this.signsModal = null;
 
     this.currentLocation = "unknown";
     this.currentMovement = "stationary";
@@ -38,6 +39,9 @@ class SignLanguageApp {
     );
     this.aboutModal = new bootstrap.Modal(
       document.getElementById("aboutModal"),
+    );
+    this.signsModal = new bootstrap.Modal(
+      document.getElementById("signsModal"),
     );
 
     this.setupEventListeners();
@@ -68,6 +72,9 @@ class SignLanguageApp {
     document
       .getElementById("settingsBtn")
       .addEventListener("click", () => this.settingsModal.show());
+    document
+      .getElementById("signsBtn")
+      .addEventListener("click", () => this.signsModal.show());
     document.getElementById("aboutInfoBtn").addEventListener("click", () => {
       this.settingsModal.hide();
       this.aboutModal.show();
@@ -77,7 +84,7 @@ class SignLanguageApp {
       .addEventListener("click", () => this.resetSettings());
 
     const cameraSwitch = document.getElementById("cameraSwitch");
-
+    
     cameraSwitch.addEventListener("change", (e) =>
       this.toggleCamera(e.target.checked),
     );
@@ -210,7 +217,7 @@ class SignLanguageApp {
     if (this.settings.grammar) activeFeatures.push("GRM");
 
     if (this.settings.iconicity) activeFeatures.push("ICO");
-    
+
     if (this.settings.regional) activeFeatures.push("REG");
 
     container.innerHTML = activeFeatures
@@ -338,7 +345,10 @@ class SignLanguageApp {
       100,
     );
 
-    if (this.gestureStability >= this.stabilityThreshold || gesture !== this.currentGesture) {
+    if (
+      this.gestureStability >= this.stabilityThreshold ||
+      gesture !== this.currentGesture
+    ) {
       this.updateGestureDisplay(gesture, this.confidenceScore);
       if (
         this.gestureStability === this.stabilityThreshold &&
@@ -527,11 +537,8 @@ class SignLanguageApp {
 }
 
 const style = document.createElement("style");
-
 style.textContent = `@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}`;
-
 document.head.appendChild(style);
-
 document.addEventListener("DOMContentLoaded", () => {
   window.app = new SignLanguageApp();
 });
