@@ -113,6 +113,7 @@ Navigate to `http://localhost:5000`
         ├── README.md              # Documentation
         ├── static/
         │   ├── assets/
+        │   ├── signs/             # 26 images for hand sign named a.png, b.png, c.png ... until z.png
         │   ├── css/
         │   │   └── style.css      # Styling
         │   └── js/
